@@ -1,9 +1,22 @@
 #include <stdio.h>
+#include <assert.h>
+
+/*
+  TODO:
+    - error handling (expections?)
+*/
 
 #define internal static
+
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int uint;
+typedef unsigned char byte;
+typedef unsigned short word;
+
+#define true 1
+#define false 0
+typedef int bool;
 
 #define OPCODE(opname, addrmode) opname##_##addrmode
 #define DEFINE_OPCODE(opname, addrmode, opcode) OPCODE(opname, addrmode) = opcode
@@ -60,6 +73,65 @@ internal const operation_t g_Operations[] = {
   DEFINE_OPERATION(ADC, INDIRECT_Y, 2, 5),
 };
 
+#define arraysize(a) (sizeof(a) / sizeof(a[0]))
+
+typedef struct {
+  void *p;
+  size_t size;
+} buffer_t;
+
+typedef struct {
+  buffer_t buffer;
+  size_t pos;
+} stream_t;
+
+internal void stream_init(stream_t *stream, void *buffer, size_t size)
+{
+  assert(stream);
+  assert(buffer);
+  
+  stream->buffer.p = buffer;
+  stream->buffer.size = size;
+  stream->pos = 0;
+}
+
+internal bool stream_eof(stream_t *stream)
+{
+  assert(stream);
+  assert(stream->buffer.p);
+  
+  return (stream->pos >= stream->buffer.size);
+}
+
+internal byte stream_read_byte(stream_t *stream)
+{
+  assert(stream);
+  assert(stream->buffer.p);
+  
+  //TODO(adm244): error handling
+  {
+    byte *p = (byte *)stream->buffer.p;
+    return p[stream->pos++];
+  }
+}
+
+internal word stream_read_word(stream_t *stream)
+{
+  assert(stream);
+  assert(stream->buffer.p);
+  
+  //TODO(adm244): error handling
+  {
+    byte bl = stream_read_byte(stream);
+    byte bh = stream_read_byte(stream);
+    
+    return (word)((bh << 8) | bl);
+  }
+}
+
+#define BL(a) ((byte)a)
+#define BH(a) ((byte)(a >> 8))
+
 int main(int argc, char *argv[])
 {
   u8 buffer[] = {
@@ -86,72 +158,58 @@ int main(int argc, char *argv[])
     0013: FF        UNDEFINED
   */
   
-  size_t i = 0;
-  size_t size = (sizeof(buffer) / sizeof(buffer[0]));
-  while (i < size) {
-    u8 opcode = buffer[i];
-    u16 operand = 0;
+  stream_t input_stream = {0};
+  stream_init(&input_stream, buffer, arraysize(buffer));
+  
+  while (!stream_eof(&input_stream)) {
+    byte opcode = stream_read_byte(&input_stream);
+    word operand = 0;
     
-    printf("%04X: %02X ", i, opcode);
+    printf("%04X: %02X ", (input_stream.pos - 1), opcode);
     
     switch (opcode) {
       case OPCODE(ADC, IMMEDIATE): {
-        operand = buffer[i + 1];
+        operand = stream_read_byte(&input_stream);
         printf("%02X\tADC #%02Xh", operand, operand);
-        i += 2;
       } break;
       
       case OPCODE(ADC, ZEROPAGE): {
-        operand = buffer[i + 1];
+        operand = stream_read_byte(&input_stream);
         printf("%02X\tADC %02Xh", operand, operand);
-        i += 2;
       } break;
       
       case OPCODE(ADC, ZEROPAGE_X): {
-        operand = buffer[i + 1];
+        operand = stream_read_byte(&input_stream);
         printf("%02X\tADC %02Xh, X", operand, operand);
-        i += 2;
       } break;
       
       case OPCODE(ADC, ABSOLUTE): {
-        u8 bl = buffer[i + 1];
-        u8 bh = buffer[i + 2];
-        operand = (bh << 8) | bl;
-        printf("%02X %02X\tADC %0Xh", bl, bh, operand);
-        i += 3;
+        operand = stream_read_word(&input_stream);
+        printf("%02X %02X\tADC %0Xh", BL(operand), BH(operand), operand);
       } break;
       
       case OPCODE(ADC, ABSOLUTE_X): {
-        u8 bl = buffer[i + 1];
-        u8 bh = buffer[i + 2];
-        operand = (bh << 8) | bl;
-        printf("%02X %02X\tADC %0Xh, X", bl, bh, operand);
-        i += 3;
+        operand = stream_read_word(&input_stream);
+        printf("%02X %02X\tADC %0Xh, X", BL(operand), BH(operand), operand);
       } break;
       
       case OPCODE(ADC, ABSOLUTE_Y): {
-        u8 bl = buffer[i + 1];
-        u8 bh = buffer[i + 2];
-        operand = (bh << 8) | bl;
-        printf("%02X %02X\tADC %0Xh, Y", bl, bh, operand);
-        i += 3;
+        operand = stream_read_word(&input_stream);
+        printf("%02X %02X\tADC %0Xh, Y", BL(operand), BH(operand), operand);
       } break;
       
       case OPCODE(ADC, INDIRECT_X): {
-        operand = buffer[i + 1];
+        operand = stream_read_byte(&input_stream);
         printf("%02X\tADC (%02Xh, X)", operand, operand);
-        i += 2;
       } break;
       
       case OPCODE(ADC, INDIRECT_Y): {
-        operand = buffer[i + 1];
+        operand = stream_read_byte(&input_stream);
         printf("%02X\tADC (%02Xh), Y", operand, operand);
-        i += 2;
       } break;
       
       default: {
         printf("\tUNDEFINED", opcode);
-        ++i;
       } break;
     }
     
