@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 
+#undef assert
 #include "asm650x.h"
 
 internal char storage[500];
@@ -31,23 +32,33 @@ int main(int argc, char *argv[])
     0xEA, 0xCA, 0xD0, 0xFB, 0x60, 0x00
   };
   
+  printf("sizeof(instruction_t): %d\n", sizeof(instruction_t));
+  printf("\n");
+  
   asm650x_init(storage, sizeof(storage));
   {
     int i, j;
-    instruction_list_t *instructions = asm650x_decode(buffer, sizeof(buffer));
+    //instruction_list_t *instructions = asm650x_decode(buffer, sizeof(buffer));
+    instruction_list_t *instructions = asm650x_decode(buffer, 13);
     
-    for (i = 0; i < instructions->count; ++i) {
-      instruction_t *instruction = &instructions->list[i];
-      char buffer[64];
+    assert(instructions);
+    
+    for (i = 0; i < instructions->length; ++i) {
+      instruction_t *instruction = &instructions->items[i];
+      char buffer[100];
+      char asm[100] = {0};
       
-      sprintf(buffer, "%04X:\t", instruction->offset);
+      sprintf(buffer, "$%04X: ", instruction->offset);
       
-      sprintf(buffer, "%02X", instruction->code[0]);
+      sprintf(buffer, "%s%02X", buffer, instruction->code[0]);
       for (j = 1; j < instruction->length; ++j) {
-        sprintf(buffer, " %02X", instruction->code[j]);
+        sprintf(buffer, "%s %02X", buffer, instruction->code[j]);
       }
       
-      sprintf(buffer, "\t%s\n", asm650x_get_string(instruction));
+      asm650x_get_string(asm, sizeof(asm), instruction);
+      sprintf(buffer, "%s\t%s\n", buffer, asm);
+      
+      printf(buffer);
     }
   }
   
