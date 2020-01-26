@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <assert.h>
 
-#undef assert
+//#undef assert
 #include "asm650x.h"
 
-internal char storage[500];
+internal char storage[4096];
 
 int main(int argc, char *argv[])
 {
@@ -38,8 +38,7 @@ int main(int argc, char *argv[])
   asm650x_init(storage, sizeof(storage));
   {
     int i, j;
-    //instruction_list_t *instructions = asm650x_decode(buffer, sizeof(buffer));
-    instruction_list_t *instructions = asm650x_decode(buffer, 13);
+    instruction_list_t *instructions = asm650x_decode(buffer, sizeof(buffer));
     
     assert(instructions);
     
