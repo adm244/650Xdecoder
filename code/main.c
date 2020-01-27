@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <assert.h>
 
-//#undef assert
 #include "asm650x.h"
 
 internal char storage[4096];
+internal word code_base_address = 0x600;
+
+char * get_instruction_string(char *buffer, size_t size, instruction_t *instruction);
 
 int main(int argc, char *argv[])
 {
@@ -47,14 +49,14 @@ int main(int argc, char *argv[])
       char buffer[100];
       char asm[100] = {0};
       
-      sprintf(buffer, "$%04X: ", instruction->offset);
+      sprintf(buffer, "$%04X: ", instruction->offset + code_base_address);
       
       sprintf(buffer, "%s%02X", buffer, instruction->code[0]);
       for (j = 1; j < instruction->length; ++j) {
         sprintf(buffer, "%s %02X", buffer, instruction->code[j]);
       }
       
-      asm650x_get_string(asm, sizeof(asm), instruction);
+      get_instruction_string(asm, sizeof(asm), instruction);
       sprintf(buffer, "%s\t%s\n", buffer, asm);
       
       printf(buffer);
@@ -62,4 +64,154 @@ int main(int argc, char *argv[])
   }
   
   return(0);
+}
+
+internal bool get_operand_string(char *buffer, size_t size, instruction_t *instruction)
+{
+  char fmt[64];
+  
+  switch (instruction->addrmode) {
+    case IMPLIED:
+      return false;
+    
+    case ACCUMULATOR: {
+      sprintf_s(buffer, size, "A");
+      return true;
+    }
+    
+    case IMMEDIATE: {
+      strcpy_s(fmt, sizeof(fmt), "#$%02X");
+    } break;
+    
+    case RELATIVE: {
+      int next_address = instruction->offset + instruction->length;
+      int offset = next_address + (char)instruction->operand.b;
+      
+      sprintf_s(buffer, size, "$%04X", offset + code_base_address);
+      return true;
+    }
+    
+    case ZEROPAGE: {
+      strcpy_s(fmt, sizeof(fmt), "$%02X");
+    } break;
+    
+    case ZEROPAGE_X: {
+      strcpy_s(fmt, sizeof(fmt), "$%02X, X");
+    } break;
+    
+    case ZEROPAGE_Y: {
+      strcpy_s(fmt, sizeof(fmt), "$%02X, Y");
+    } break;
+    
+    case ABSOLUTE: {
+      strcpy_s(fmt, sizeof(fmt), "$%04X");
+    } break;
+    
+    case ABSOLUTE_X: {
+      strcpy_s(fmt, sizeof(fmt), "$%04X, X");
+    } break;
+    
+    case ABSOLUTE_Y: {
+      strcpy_s(fmt, sizeof(fmt), "$%04X, Y");
+    } break;
+    
+    case INDIRECT: {
+      strcpy_s(fmt, sizeof(fmt), "($%02X)");
+    } break;
+    
+    case INDIRECT_X: {
+      strcpy_s(fmt, sizeof(fmt), "($%02X, X)");
+    } break;
+    
+    case INDIRECT_Y: {
+      strcpy_s(fmt, sizeof(fmt), "($%02X), Y");
+    } break;
+    
+    default:
+      assert(false);
+      return false;
+  }
+  
+  sprintf_s(buffer, size, fmt, instruction->operand.w);
+  return true;
+}
+
+internal char * get_instruction_string(char *buffer, size_t size, instruction_t *instruction)
+{
+#define CASE_OPCODE(op) case op: {\
+  char buffer_operand[64];\
+  if (get_operand_string(buffer_operand, sizeof(buffer_operand), instruction)) {\
+    sprintf_s(buffer, size, #op" %s", buffer_operand);\
+  } else {\
+    sprintf_s(buffer, size, #op);\
+  }\
+} break
+
+  switch (instruction->opname) {
+    CASE_OPCODE(ADC);
+    CASE_OPCODE(AND);
+    CASE_OPCODE(ASL);
+    CASE_OPCODE(BCC);
+    CASE_OPCODE(BCS);
+    CASE_OPCODE(BEQ);
+    CASE_OPCODE(BIT);
+    CASE_OPCODE(BMI);
+    CASE_OPCODE(BNE);
+    CASE_OPCODE(BPL);
+    CASE_OPCODE(BRK);
+    CASE_OPCODE(BVC);
+    CASE_OPCODE(BVS);
+    CASE_OPCODE(CLC);
+    CASE_OPCODE(CLD);
+    CASE_OPCODE(CLI);
+    CASE_OPCODE(CLV);
+    CASE_OPCODE(CMP);
+    CASE_OPCODE(CPX);
+    CASE_OPCODE(CPY);
+    CASE_OPCODE(DEC);
+    CASE_OPCODE(DEX);
+    CASE_OPCODE(DEY);
+    CASE_OPCODE(EOR);
+    CASE_OPCODE(INC);
+    CASE_OPCODE(INX);
+    CASE_OPCODE(INY);
+    CASE_OPCODE(JMP);
+    CASE_OPCODE(JSR);
+    CASE_OPCODE(LDA);
+    CASE_OPCODE(LDX);
+    CASE_OPCODE(LDY);
+    CASE_OPCODE(LSR);
+    CASE_OPCODE(NOP);
+    CASE_OPCODE(ORA);
+    CASE_OPCODE(PHA);
+    CASE_OPCODE(PHP);
+    CASE_OPCODE(PLA);
+    CASE_OPCODE(PLP);
+    CASE_OPCODE(ROL);
+    CASE_OPCODE(ROR);
+    CASE_OPCODE(RTI);
+    CASE_OPCODE(RTS);
+    CASE_OPCODE(SBC);
+    CASE_OPCODE(SEC);
+    CASE_OPCODE(SED);
+    CASE_OPCODE(SEI);
+    CASE_OPCODE(STA);
+    CASE_OPCODE(STX);
+    CASE_OPCODE(STY);
+    CASE_OPCODE(TAX);
+    CASE_OPCODE(TAY);
+    CASE_OPCODE(TYA);
+    CASE_OPCODE(TSX);
+    CASE_OPCODE(TXA);
+    CASE_OPCODE(TXS);
+    
+    default:
+      assert(false);
+      sprintf_s(buffer, size, "UNDEFINED");
+      break;
+  }
+  
+#undef CASE_OPCODE
+  
+  return buffer;
 }

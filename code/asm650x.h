@@ -501,6 +501,27 @@ internal void asm650x_init(void *storage, size_t size)
   arena_init(&asm650x.data, storage, size);
 }
 
+internal instruction_list_t * asm650x_decode(void *buffer, size_t size)
+{
+  stream_t stream = {0};
+  instruction_list_t *list;
+  
+  assert(buffer);
+  assert(size > 0);
+  
+  arena_reset(&asm650x.data);
+  list = asm650x_list_create();
+  
+  stream_init(&stream, buffer, size);
+  
+  while (!stream_eof(&stream)) {
+    instruction_t instruction = {0};
+    size_t address = stream.pos;
+    byte opcode = stream_read_byte(&stream);
+    
+    instruction.offset = address;
+    instruction.opcode = opcode;
+    
 #define CASE_OPCODE_1(op, mode) case OPCODE(op, mode): {\
   instruction.opname = op;\
   instruction.addrmode = mode;\
@@ -522,27 +543,6 @@ internal void asm650x_init(void *storage, size_t size)
   instruction.length = 3;\
   instruction.operand.w = stream_read_word(&stream);\
 } break
-
-internal instruction_list_t * asm650x_decode(void *buffer, size_t size)
-{
-  stream_t stream = {0};
-  instruction_list_t *list;
-  
-  assert(buffer);
-  assert(size > 0);
-  
-  arena_reset(&asm650x.data);
-  list = asm650x_list_create();
-  
-  stream_init(&stream, buffer, size);
-  
-  while (!stream_eof(&stream)) {
-    instruction_t instruction = {0};
-    size_t address = stream.pos;
-    byte opcode = stream_read_byte(&stream);
-    
-    instruction.offset = address;
-    instruction.opcode = opcode;
     
     switch (opcode) {
       // ADC
@@ -758,55 +758,16 @@ internal instruction_list_t * asm650x_decode(void *buffer, size_t size)
       } break;
     }
     
+#undef CASE_OPCODE_3
+#undef CASE_OPCODE_2
+#undef CASE_OPCODE_1
+    
     if (!asm650x_list_push(list, &instruction)) {
       assert(false);
     }
   }
   
   return list;
-}
-
-//FIX(adm244): proper name
-internal char * asm650x_get_string(char *buffer, size_t size, instruction_t *instruction)
-{
-  switch (instruction->opname) {
-    case RTS: {
-      sprintf_s(buffer, size, "RTS");
-    } break;
-    
-    case LDA: {
-      sprintf_s(buffer, size, "LDA");
-      switch (instruction->addrmode) {
-        case IMMEDIATE: {
-          sprintf_s(buffer, size, "%s #$%02X", buffer, instruction->operand.b);
-        } break;
-        
-        default:
-          //assert(false);
-          break;
-      }
-    } break;
-    
-    case JSR: {
-      sprintf_s(buffer, size, "JSR");
-      switch (instruction->addrmode) {
-        case ABSOLUTE: {
-          sprintf_s(buffer, size, "%s $%04X", buffer, instruction->operand.w);
-        } break;
-        
-        default:
-          //assert(false);
-          break;
-      }
-    } break;
-    
-    default:
-      //assert(false);
-      sprintf_s(buffer, size, "UNDEFINED");
-      break;
-  }
-  
-  return buffer;
 }
 
 #endif
