@@ -1,3 +1,35 @@
+/*
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+/*
+  Macro:
+  - ASM650X_NOTYPEDEF: don't define {bool, byte, word} types
+  - ASM650X_CUSTOMARENA: don't define "arena" implementation
+  - ASM650X_CUSTOMSTREAM: don't define "stream" implementation
+*/
+
 #ifndef _ASM650X_DECODER_H_
 #define _ASM650X_DECODER_H_
 
@@ -305,11 +337,10 @@ enum opcode_e {
   // TXA
   OPCODE(TXA, IMPLIED) = 0x8A,
   // TXS
-  OPCODE(TXS, IMPLIED) = 0x9A,
+  OPCODE(TXS, IMPLIED) = 0x9A
 };
 
 /////////////////////////// GLOBAL DATA ////////////////////////////
-//NOTE(adm244): assuming that cpu and data are little-endian
 typedef union {
   byte b;
   word w;
@@ -323,6 +354,7 @@ typedef struct {
 
 //NOTE(adm244): we need this pragma here to make sure that compiler won't add any
 // padding that can prevent us from properly accessing data through 'code' array
+//NOTE(adm244): assuming that cpu and data are little-endian
 #pragma pack(push, 1)
   union {
     struct {
@@ -391,7 +423,7 @@ internal byte stream_read_byte(stream_t *stream)
   assert(stream);
   assert(stream->buffer.p);
   
-  //TODO(adm244): error handling
+  assert(!stream_eof(stream));
   {
     byte *p = (byte *)stream->buffer.p;
     return p[stream->pos++];
@@ -403,7 +435,7 @@ internal word stream_read_word(stream_t *stream)
   assert(stream);
   assert(stream->buffer.p);
   
-  //TODO(adm244): error handling
+  assert(!stream_eof(stream));
   {
     byte bl = stream_read_byte(stream);
     byte bh = stream_read_byte(stream);
@@ -762,9 +794,7 @@ internal instruction_list_t * asm650x_decode(void *buffer, size_t size)
 #undef CASE_OPCODE_2
 #undef CASE_OPCODE_1
     
-    if (!asm650x_list_push(list, &instruction)) {
-      assert(false);
-    }
+    assert(asm650x_list_push(list, &instruction));
   }
   
   return list;

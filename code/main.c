@@ -1,3 +1,28 @@
+/*
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include <stdio.h>
 #include <assert.h>
 
@@ -11,7 +36,10 @@ char * get_instruction_string(char *buffer, size_t size, instruction_t *instruct
 int main(int argc, char *argv[])
 {
   char buffer[] = {
-    // SNAKE6502
+    /* SNAKE6502
+       Taken from here (scroll down a bit, click "Assemble" then "Hexdump"):
+        http://skilldrick.github.io/easy6502/#snake
+    */
     0x20, 0x06, 0x06, 0x20, 0x38, 0x06, 0x20, 0x0D, 0x06, 0x20, 0x2A, 0x06, 0x60, 0xA9, 0x02, 0x85,
     0x02, 0xA9, 0x04, 0x85, 0x03, 0xA9, 0x11, 0x85, 0x10, 0xA9, 0x10, 0x85, 0x12, 0xA9, 0x0F, 0x85,
     0x14, 0xA9, 0x04, 0x85, 0x11, 0x85, 0x13, 0x85, 0x15, 0x60, 0xA5, 0xFE, 0x85, 0x00, 0xA5, 0xFE,
@@ -205,10 +233,10 @@ internal char * get_instruction_string(char *buffer, size_t size, instruction_t 
     CASE_OPCODE(TXA);
     CASE_OPCODE(TXS);
     
-    default:
+    default: {
       assert(false);
       sprintf_s(buffer, size, "UNDEFINED");
-      break;
+    } break;
   }
   
 #undef CASE_OPCODE
